@@ -1,0 +1,11 @@
+*.class
+*.jar
+*.swp
+__pycache__
+dblp/scala/project/target/config-classes
+dblp/scala/target/streams/compile
+dblp/scala/target/streams/$global
+dblp/scala/target/streams/runtime
+dblp/scala/target/streams/test
+dblp/scala/target/test-reports
+
