@@ -16,8 +16,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         sys.exit("Usage: citationsRunner <inputfiles> <outputdir>")
 
-    inputfiles = sys.argv[1]
-    outputdir = sys.argv[2]
+    outputdir, *inputfiles = sys.argv[1:]
+
+    print("outputdir: %s", outputdir)
+    print("inputfiles: %s", inputfiles)
 
     # spark = SparkSession.builder.master("local[*]").getOrCreate()
     # TODO: configure spark session here?
@@ -34,7 +36,7 @@ if __name__ == "__main__":
     print("reading from %s", inputfiles)
     citationData = spark.read.json(inputfiles, schema=schema)
     # citCountArrays: id, [array of citation counts by year]
-    citCountArrays = citations.citationCountE2E(citationData, 34)
+    citCountArrays = citations.citationCountsE2E(citationData, 34)
 
     averageByAggregate = citations.averageAggregates(citCountArrays, 100)
 
