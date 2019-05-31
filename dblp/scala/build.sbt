@@ -19,6 +19,8 @@ libraryDependencies ++= Seq(
 
   // "org.scala-lang" % "scala-reflect" % "2.12.8" % "provided",
   "org.scala-lang" % "scala-reflect" % "2.11.11" % "provided",
+  // Storage locator for talking to S3 on IBM
+  "com.ibm.stocator" % "stocator" % "1.0.1",
   //"org.scalatest" %% "scalatest" % "3.2.0-SNAP9" % Test
   // At least some scalatest 3.2.x snapshots didn't work with scala 2.11.
   "org.scalatest" %% "scalatest" % "2.2.2" % Test
