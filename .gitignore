@@ -1,6 +1,7 @@
 *.class
 *.jar
 *.swp
+.history
 __pycache__
 dblp/scala/project/target/config-classes
 dblp/scala/target/streams/compile
