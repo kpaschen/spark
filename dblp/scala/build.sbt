@@ -4,24 +4,29 @@ name := "DBLP-Scala"
 version := "0.9"
 // This is what's running on IBM A1.2: Scala 2.11, Spark 2.3.2
 scalaVersion := "2.11.8"
-val sparkVersion = "2.3.2"
+//val sparkVersion = "2.3.2"
 // This is my setup at home (Scala 2.12.8, spark 2.4.0)
 //scalaVersion := "2.12.8"
-// val sparkVersion = "2.4.0"
+val sparkVersion = "2.4.0"
 scalacOptions += "-target:jvm-1.8"
 fork in Test := true
 parallelExecution in Test := false
 javaOptions ++= Seq("-Xms512M", "-Xmx2048M", "-XX:+CMSClassUnloadingEnabled")
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 libraryDependencies ++= Seq(
-  "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
-  "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
+  // These need to be 'provided' for assembly but compiled in for 'run'
+  //"org.apache.spark" %% "spark-core" % sparkVersion % "provided",
+  //"org.apache.spark" %% "spark-core" % sparkVersion % "provided",
+  "org.apache.spark" %% "spark-sql" % sparkVersion,
+  "org.apache.spark" %% "spark-sql" % sparkVersion,
 
-  // "org.scala-lang" % "scala-reflect" % "2.12.8" % "provided",
-  "org.scala-lang" % "scala-reflect" % "2.11.11" % "provided",
+  "org.scala-lang" % "scala-library" % "2.11.8",
+  "org.scala-lang" % "scala-compiler" % "2.11.8",
+  "org.scala-lang" % "scala-reflect" % "2.11.8",
+
   // Storage locator for talking to S3 on IBM
-  "com.ibm.stocator" % "stocator" % "1.0.1",
-  //"org.scalatest" %% "scalatest" % "3.2.0-SNAP9" % Test
+  // "com.ibm.stocator" % "stocator" % "1.0.1",
+  // "org.scalatest" %% "scalatest" % "3.2.0-SNAP9" % Test
   // At least some scalatest 3.2.x snapshots didn't work with scala 2.11.
   "org.scalatest" %% "scalatest" % "2.2.2" % Test
 )
