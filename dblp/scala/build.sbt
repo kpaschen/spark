@@ -6,7 +6,8 @@ version := "0.9"
 scalaVersion := "2.11.8"
 //val sparkVersion = "2.3.2"
 // This is my setup at home (Scala 2.12.8, spark 2.4.0)
-//scalaVersion := "2.12.8"
+// However, spark 2.4.0 does not work with scala 2.12
+// scalaVersion := "2.12.8"
 val sparkVersion = "2.4.0"
 scalacOptions += "-target:jvm-1.8"
 fork in Test := true
@@ -14,11 +15,9 @@ parallelExecution in Test := false
 javaOptions ++= Seq("-Xms512M", "-Xmx2048M", "-XX:+CMSClassUnloadingEnabled")
 testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 libraryDependencies ++= Seq(
-  // These need to be 'provided' for assembly but compiled in for 'run'
-  //"org.apache.spark" %% "spark-core" % sparkVersion % "provided",
-  //"org.apache.spark" %% "spark-core" % sparkVersion % "provided",
-  "org.apache.spark" %% "spark-sql" % sparkVersion,
-  "org.apache.spark" %% "spark-sql" % sparkVersion,
+  // These need to be 'provided' for assembly but compiled in otherwise.
+  "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
+  "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
 
   "org.scala-lang" % "scala-library" % "2.11.8",
   "org.scala-lang" % "scala-compiler" % "2.11.8",
