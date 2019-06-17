@@ -1,27 +1,8 @@
-from decimal import localcontext,Decimal
 from pyspark.sql.types import IntegerType, ArrayType
 from pyspark.sql.functions import col, collect_list, struct, udf
 import pyspark.sql.functions
 
-# The pairsToArray method gets called from a mapper, so make sure
-# it's easy to serialize.
-class pairsToArrayHelper(object):
-    @staticmethod
-    def pairsToArray(pairs):
-        return [pairs[x] if (x in pairs) else 0 for x in range(max(pairs.keys()) + 1)]
-
-class aggregationHelper(object):
-    @staticmethod
-    def seqOp(acc, newItem):
-        for idx, value in enumerate(newItem[1]):
-            acc[0][idx] += value
-            acc[1][idx] += 1
-        return acc
-    
-    @staticmethod
-    def combOp(acc1, acc2):
-        return ([x1 + x2 for x1,x2 in zip(acc1[0], acc2[0])],
-                [y1 + y2 for y1,y2 in zip(acc1[1], acc2[1])])
+import citationsCommon
 
 def countByIdAndYear(df):
     docsplit = df.rdd.flatMap(lambda row:
@@ -61,18 +42,10 @@ def citationCountArrays(idYearAge):
     # I ended up doing the latter since it seems way easier and is probably no 
     # less efficient than using a udf from python.
     # tmp.select(pyspark.sql.functions.map_from_entries('ageCountPairs')).show()
-    p2Afunc = pairsToArrayHelper.pairsToArray
+    p2Afunc = citationsCommon.pairsToArrayHelper.pairsToArray
     return tmp.withColumn('ageCountMap',
             pyspark.sql.functions.map_from_entries('ageCountPairs')).drop(
                     'ageCountPairs').rdd.mapValues(lambda x: p2Afunc(x))
-
-def averageAggregates(cc_arrays, max_years):
-    startingTuple = ([0] * max_years, [0] * max_years)
-    sumsAndCounts = cc_arrays.aggregate(startingTuple,
-            aggregationHelper.seqOp, aggregationHelper.combOp)
-    with localcontext() as ctx:
-        ctx.prec = 3
-        return [float((Decimal(x) / Decimal(y)) if y > 0 else 0.0) for x,y in zip(sumsAndCounts[0], sumsAndCounts[1])]
 
 # df is the dataframe read from json before we've filtered out rows where
 # references is NULL

@@ -1,12 +1,12 @@
 import pytest
-from . import citations
+from . import citations,citationsCommon
 from pyspark.sql import Row
 
 pytestmark = pytest.mark.usefixtures("with_spark_context")
 
 def test_pairs_to_array():
     pairs = [(1, 2), (3, 6), (4, 8)]
-    arr = citations.pairsToArrayHelper.pairsToArray(pairs)
+    arr = citationsCommon.pairsToArrayHelper.pairsToArray(pairs)
     assert arr == [0, 2, 0, 6, 8]
 
 def test_count_by_id_and_year(with_spark_context):

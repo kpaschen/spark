@@ -1,51 +1,66 @@
 import os
+import getopt
 import sys
 
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType, ArrayType, IntegerType
 
-import citations
+import citationsCommon, citations, citationsDF
 
 # Make sure these are set
-#os.environ["Java_HOME"] = "/usr/lib64/jvm/jre-1.8.0-openjdk"
-#os.environ["SPARK_HOME"] = "/home/kathrin/textbooks/spark/spark-2.4.0-bin-hadoop2.7"
+#os.environ["Java_HOME"] = ...
+#os.environ["SPARK_HOME"] = ...
 os.environ["PYTHONHASHSEED"] = "2"
 
 if __name__ == "__main__":
 
     if len(sys.argv) < 3:
-        sys.exit("Usage: citationsRunner <inputfiles> <outputdir>")
+        sys.exit("Usage: citationsRunner <outputdir> <inputfiles>")
 
-    outputdir, *inputfiles = sys.argv[1:]
+    ovpairs, args = getopt.getopt(sys.argv[1:], "d", ["dataframe"])
 
-    print("outputdir: %s", outputdir)
-    print("inputfiles: %s", inputfiles)
+    useDataFrames = False
+    for opt, _ in ovpairs:
+        if opt in ['-d', '--dataframe']:
+            useDataFrames = True
 
-    # spark = SparkSession.builder.master("local[*]").getOrCreate()
-    # TODO: configure spark session here?
+    outputdir, *inputfiles = args
+
+    print("outputdir: ", outputdir)
+    print("inputfiles: ", inputfiles)
+    if not inputfiles:
+        sys.exit("Need an input file")
+
+    useJson = inputfiles[0].endswith("json")
+
     spark = SparkSession.builder.getOrCreate()
+    spark.conf.set("spark.sql.parquet.binaryAsString", True)
     sc = spark.sparkContext
 
-    # prepare the schema
-    schema = StructType([
-        StructField('id', StringType(), False),
-        StructField('references', ArrayType(StringType(), False), True),
-        StructField('year', IntegerType(), False),
-    ])
+    citationData = None
+    if useJson:
+      # prepare the schema
+      schema = StructType([
+          StructField('id', StringType(), False),
+          StructField('references', ArrayType(StringType(), False), True),
+          StructField('year', IntegerType(), False),
+      ])
+      citationData = spark.read.json(inputfiles, schema=schema)
+    else:
+      # parquet does not support schema
+      citationData = spark.read.parquet(inputfiles[0])
 
-    print("reading from %s", inputfiles)
-    citationData = spark.read.json(inputfiles, schema=schema)
     # citCountArrays: id, [array of citation counts by year]
-    citCountArrays = citations.citationCountsE2E(citationData, 34)
+    citCountArrays = None
+    if useDataFrames:
+      citCountArrays = citationsDF.citationCountsE2E(citationData, 34)
+    else:
+      citCountArrays = citations.citationCountsE2E(citationData, 34)
 
-    averageByAggregate = citations.averageAggregates(citCountArrays, 100)
+    averageByAggregate = citationsCommon.averageAggregates(citCountArrays, 100)
 
-    print("writing output to %s", outputdir)
-    citCountArrays.coalesce(10).saveAsTextFile('{}/count_arrays.csv'.format(outputdir))
-    # This save only works with dataframes.
-    #citCountArrays.coalesce(1).write.format('com.databricks.spark.csv').options(
-    #        header='true').save(
-    #                'file:///{}/count_arrays.csv'.format(outputdir))
+    citCountArrays.coalesce(10).saveAsTextFile(
+            '{}/count_arrays.csv'.format(outputdir))
     open('{}/averages'.format(outputdir) , 'w').write(
             ",".join([str(x) for x in averageByAggregate]))
  
