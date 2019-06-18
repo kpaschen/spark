@@ -21,11 +21,12 @@ object CitationsRunner {
       System.exit(1)
     }
 
-    val filename = args(1)
+    //val filenames = args.slice(1, args.length)
+    val filenames = args(1)
     val outputs = args(0)
 
     System.err.println("outputs to to " + outputs)
-    System.err.println("inputs: " + filename)
+    System.err.println("inputs: " + filenames)
 
     val spark = SparkSession
       .builder
@@ -41,7 +42,7 @@ object CitationsRunner {
     var baseData:DataFrame = null.asInstanceOf[DataFrame]
 
     // See if we're loading json or parquet data.
-    if (filename.endsWith("json")) {
+    if (filenames.endsWith("json")) {
       // This selects a subset of fields and specifies types and nullability,
       // which is useful because I know the id field is not null.
       // Also ensures year is an integer not a long.
@@ -49,13 +50,13 @@ object CitationsRunner {
         StructField("id", StringType, false),
         StructField("references", ArrayType(StringType, false), true),
         StructField("year", IntegerType, false)))
-        baseData = spark.read.schema(schema).json(filename)
+        baseData = spark.read.schema(schema).json(filenames)
     } else {
       // You can't use a schema to read a parquet file when that requires
       // typecasting (UnsupportedOperationException), so read it like this,
       // the later 'select' statements will be clever enough to only read
       // what they need.
-      val tmp = spark.read.parquet(filename)
+      val tmp = spark.read.parquet(filenames)
       baseData = tmp.withColumn("year", tmp("year").cast(IntegerType))
     }
     val idRefs = stats.idRefYearDs(baseData)

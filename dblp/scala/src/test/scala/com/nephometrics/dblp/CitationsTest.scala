@@ -98,11 +98,13 @@ class DblpCitationsTest extends FunSuite with BeforeAndAfterAll {
     assert(counted.count() == 5)
 
     for (r <- results) {
-      if (r._1 == "pub2.10") {
-        assert(2 == r._2)
-      } else {
-        assert(Array("pub3.9", "pub3.10", "pub4.10", "pub4.9").contains(r._1))
-        assert(1 == r._2)
+      r(0) match {
+        case "pub2" => assert(10 == r(1))
+                       assert(2 == r(2))
+        case "pub3" => assert(9 == r(1) || 10 == r(1))
+                       assert(1 == r(2))
+        case "pub4" => assert(9 == r(1) || 10 == r(1))
+                       assert(1 == r(2))
       }
     }
   }

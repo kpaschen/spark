@@ -3,6 +3,7 @@ package com.nephometrics.dblp
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.types._
 
 
 case class BasePublication(id: String, references: Array[String], year: Int)
@@ -28,32 +29,31 @@ class Citations(@transient val spark: SparkSession) {
 
   // Take a dataset of BasePublications, invert on the reference ids,
   // group by reference id + yearCited, sum the citation counts.
-  def countCitationsByYear(publications: Dataset[BasePublication]): Dataset[(String, Int)] = {
+  def countCitationsByYear(publications: Dataset[BasePublication]): DataFrame = {
      val citedPublications = publications.flatMap(row =>
-         for(b <- row.references) yield (b + "." + row.year, 1))
-     citedPublications.groupByKey(_._1).reduceGroups(
-       (a, b) => (a._1, a._2 + b._2)).map(_._2)
+         for(b <- row.references) yield (b, row.year, 1))
+     // Make sure the citation count is an integer.
+     val x = citedPublications.groupBy("_1", "_2").agg(sum(col("_3")))
+       .withColumnRenamed("sum(_3)", "tmp")
+     x.withColumn("citationCount", x("tmp").cast(IntegerType))
+       .drop("tmp")
   }
 
-  // Given the output of countCitationsByYear (a Dataset[(String, Int)] with
-  // id/year pairs in the string), as well as a Dataframe with publication ids
-  // and years of publication,
+  // Given the output of countCitationsByYear (a DataFrame[string, int, int])
+  // as well as a Dataframe with publication ids and years of publication,
   // create a Dataframe mapping publication id to <year the publication
   // was cited, years since the publication was published,
   // number of times the publication was cited that year>.
   // Convert the dataframe (intermediate type due to the way joins work)
   // to a Dataset[CitedPublication].
-  def countCitationsByAge(citCountByYear: Dataset[(String, Int)],
+  def countCitationsByAge(citCountByYear: DataFrame,
     baseTable: DataFrame): Dataset[CitedPublication] = {
-      // This gets us <id -> yearCited, count>
-      val idYear = citCountByYear.map(x => (x._1.split("\\."), x._2))
-        .map(y => (y._1.apply(0), y._1.apply(1).toInt, y._2)).toDF()
-
       // This gets us <id -> yearPublished>
       // You should run this on the original base table in order to
       // get publication dates also for publications with no references.
       val ddpairs = baseTable.select("id", "year")
-      idYear.join(ddpairs, idYear("_1") === ddpairs("id"), joinType="right_outer")
+      citCountByYear.join(ddpairs, citCountByYear("_1") === ddpairs("id"),
+        joinType="right_outer")
         .drop("_1")
         .withColumn("age", when($"_2".isNotNull,
           $"_2" - $"year").otherwise(lit(0)))
