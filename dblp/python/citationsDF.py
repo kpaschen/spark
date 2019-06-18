@@ -6,31 +6,27 @@ import citationsCommon
 
 def countByIdAndYear(df):
     docsplit = df.rdd.flatMap(lambda row:
-            [('{}.{}'.format(ref, row[2]), 1) for ref in row[1]])
-    return docsplit.toDF().groupBy("_1").agg({"_2": "sum"}).withColumnRenamed(
-            "sum(_2)", "citationCount")
+            [(ref, row[2], 1) for ref in row[1]])
+    return docsplit.toDF().groupBy('_1', '_2').agg({'_3': 'sum'}).withColumnRenamed(
+            'sum(_3)', 'citationCount').withColumnRenamed(
+                    '_1', 'id').withColumn(
+                            'yearCited', col('_2').cast(IntegerType())).drop('_2')
 
 def joinIdYearAge(idYearCount, df):
-    # idYear: id, year cited
-    split_id_year = pyspark.sql.functions.split(idYearCount['_1'], r'\.')
-    citCountsSplit = idYearCount.withColumn(
-            'id', split_id_year.getItem(0)).withColumn(
-                    'yearCited', split_id_year.getItem(1).cast(IntegerType()))
-
     # dfpairs: id, year published
     dfpairs = df.select("id", "year").withColumn(
             "year", df["year"].cast(IntegerType()))
 
     # idYearAge: id, year cited - year published
-    return citCountsSplit.join(dfpairs,
-            citCountsSplit['id'] == dfpairs['id']).withColumn(
+    return idYearCount.join(dfpairs,
+            idYearCount['id'] == dfpairs['id']).withColumn(
                     'age', col('yearCited') - col('year')).drop(dfpairs['id'])
 
 def citationCountArrays(idYearAge):
     # idYearAge contains citationCount, id, yearCited, year, age
     # combine 'age' and 'citationCount' into pairs, then drop everything
     # except for 'id' and those pairs, group by id and make lists of the pairs.
-    tmp = idYearAge.drop('_1').drop('year').filter(
+    tmp = idYearAge.drop('year').filter(
             col('age') > -1).withColumn('ageCountPair', struct(
                 idYearAge.age, idYearAge.citationCount)).drop(
                         'age').drop('citationCount').groupBy('id').agg(
@@ -41,7 +37,6 @@ def citationCountArrays(idYearAge):
     # on dataframes, or just convert tmp to an rdd and use mapValues on it.
     # I ended up doing the latter since it seems way easier and is probably no 
     # less efficient than using a udf from python.
-    # tmp.select(pyspark.sql.functions.map_from_entries('ageCountPairs')).show()
     p2Afunc = citationsCommon.pairsToArrayHelper.pairsToArray
     return tmp.withColumn('ageCountMap',
             pyspark.sql.functions.map_from_entries('ageCountPairs')).drop(
