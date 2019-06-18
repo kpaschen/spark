@@ -17,7 +17,7 @@ testOptions in Test += Tests.Argument(TestFrameworks.ScalaTest, "-oD")
 libraryDependencies ++= Seq(
   // These need to be 'provided' for assembly but compiled in otherwise.
   "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
-  "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
+  "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
 
   "org.scala-lang" % "scala-library" % "2.11.8",
   "org.scala-lang" % "scala-compiler" % "2.11.8",
